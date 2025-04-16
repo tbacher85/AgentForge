@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AgentForge</title>
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://cdn.jsdelivr.net/npm/daisyui@2.51.5/dist/full.css" rel="stylesheet" type="text/css">
+
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Inter:wght@400;700&display=swap" rel="stylesheet">
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/vanta@0.5.24/dist/vanta.net.min.js"></script>
+
+  <script src="https://cdn.jsdelivr.net/npm/typeit@8.0.7/dist/index.umd.js"></script>
+
+  <style>
+    body {
+      font-family: 'JetBrains Mono', monospace; /* Default font */
+      background-color: #1a202c; /* Dark background */
+      color: #e2e8f0; /* Light text */
+      margin: 0;
+    }
+    #vanta-bg {
+      position: fixed; /* Use fixed to stay during scroll */
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: -1;
+    }
+    .container {
+      position: relative; /* Ensure content stays above background */
+      z-index: 1;
+      max-width: 800px; /* Added max-width for better layout control on larger screens */
+    }
+    .terminal {
+      font-family: 'JetBrains Mono', monospace; /* Specific font for terminal */
+      background-color: #2d3748;
+      border: 1px solid #4a5568;
+      padding: 1rem;
+      border-radius: 0.5rem;
+      overflow-x: auto;
+      margin-top: 1.5rem; /* Increased margin top */
+      white-space: pre-wrap; /* Allow text wrapping in preview */
+      word-wrap: break-word;
+    }
+    .hidden {
+      display: none;
+    }
+    /* Card styling only for the Packages section */
+    #packages .card {
+      background-color: rgba(45, 55, 72, 0.8); /* Slightly transparent card */
+      backdrop-filter: blur(5px); /* Frosted glass effect */
+      border: 1px solid #4a5568;
+      padding: 1.5rem;
+      border-radius: 0.5rem;
+      transition: transform 0.3s, box-shadow 0.3s;
+    }
+    #packages .card:hover {
+      transform: scale(1.02); /* Slightly reduced hover scale */
+      box-shadow: 0 4px 20px rgba(255, 69, 0, 0.5); /* Reduced glow */
+    }
+    .price {
+      font-size: 1.5rem;
+      font-weight: bold;
+      color: #ff4500;
+    }
+
+    /* --- Fix for Input Font Readability --- */
+    #main {
+        font-family: 'Inter', sans-serif; /* Use Inter font for the form section */
+    }
+    #main input[type="text"].input,
+    #main select.select {
+      color: #e2e8f0; /* Ensure input text is light */
+      background-color: #2d3748; /* Ensure background provides contrast */
+    }
+    #main input[type="text"].input::placeholder {
+      color: #a0aec0; /* Make placeholder readable but distinct */
+    }
+    /* Style select dropdown text color (might need browser-specific) */
+     #main select.select option {
+        background-color: #2d3748; /* Background for options */
+        color: #e2e8f0; /* Text color for options */
+     }
+     /* --- End Fix --- */
+
+     /* Add some spacing between form elements */
+     #main label.block {
+         margin-bottom: 1.25rem; /* Increased bottom margin for labels */
+     }
+     #main .btn#generate {
+         margin-top: 1.5rem; /* Add margin above the generate button */
+     }
+
+  </style>
+</head>
+<body class="dark">
+
+<div id="vanta-bg"></div>
+
+<div class="container mx-auto px-4 py-8">
+  <h1 id="heading" class="text-4xl text-center mb-8 font-bold"></h1>
+
+  <nav class="text-center mb-8">
+    <a href="#main" id="main-link" class="btn btn-outline btn-primary">Main App</a>
+    <a href="#packages" id="packages-link" class="btn btn-outline btn-secondary">Packages</a>
+  </nav>
+
+  <section id="main">
+    <label class="block">
+      <span class="text-sm font-bold">Goal:</span>
+      <input type="text" id="goal" class="input input-bordered w-full mt-1" placeholder="e.g., Summarize documents">
+    </label>
+
+    <label class="block">
+      <span class="text-sm font-bold">Tools:</span>
+      <select id="tools" class="select select-bordered w-full mt-1">
+        <option value="memory">Memory</option>
+        <option value="web_access">Web access</option>
+        <option value="code_execution">Code execution</option>
+        <option value="api_calling">API calling</option>
+      </select>
+    </label>
+
+    <label class="block">
+      <span class="text-sm font-bold">Advanced Settings:</span>
+      <div class="mt-1 grid grid-cols-1 sm:grid-cols-2 gap-2">
+        <label class="cursor-pointer flex items-center">
+          <input type="checkbox" id="adv-multi-step" value="Allow multi-step reasoning" class="checkbox checkbox-primary mr-2">
+          Allow multi-step reasoning
+        </label>
+        <label class="cursor-pointer flex items-center">
+          <input type="checkbox" id="adv-tool-chaining" value="Allow tool chaining" class="checkbox checkbox-primary mr-2">
+          Allow tool chaining
+        </label>
+      </div>
+    </label>
+
+    <label class="block">
+      <span class="text-sm font-bold">Agent Personality:</span>
+      <div class="mt-1 grid grid-cols-1 sm:grid-cols-3 gap-2">
+        <label class="cursor-pointer flex items-center">
+          <input type="checkbox" id="pers-friendly" name="personality" value="Friendly" class="checkbox checkbox-secondary mr-2">
+          Friendly
+        </label>
+        <label class="cursor-pointer flex items-center">
+          <input type="checkbox" id="pers-formal" name="personality" value="Formal" class="checkbox checkbox-secondary mr-2">
+          Formal
+        </label>
+        <label class="cursor-pointer flex items-center">
+          <input type="checkbox" id="pers-creative" name="personality" value="Creative" class="checkbox checkbox-secondary mr-2">
+          Creative
+        </label>
+      </div>
+    </label>
+
+    <label class="block">
+        <div class="flex justify-between items-center">
+            <span class="text-sm font-bold">Creativity:</span>
+            <span id="creativity-value" class="text-sm font-mono text-accent">50</span> </div>
+      <input type="range" id="creativity" min="0" max="100" value="50" class="range range-accent mt-1">
+    </label>
+
+    <div class="w-full"> <button id="generate" class="btn btn-primary w-full">Generate Agent Config</button>
+    </div>
+
+    <div class="terminal">
+      <pre id="preview" class="text-green-400">Configuration will appear here...</pre>
+    </div>
+
+    <button id="copy" class="btn btn-outline btn-accent mt-4 w-full hidden">Copy to Clipboard</button>
+  </section>
+
+  <section id="packages" class="hidden">
+    <h2 class="text-3xl text-center mb-8 font-bold">AgentForge Packages</h2>
+
+    <div id="packages-list" class="grid grid-cols-1 md:grid-cols-3 gap-8">
+      <div class="card">
+        <h3 class="text-xl font-bold mb-4">Free</h3>
+        <p class="mb-2 text-sm opacity-80">Perfect for casual users or small experiments. Limited functionalities but enough to try AgentForge's capabilities.</p>
+        <ul class="mb-4 text-sm space-y-1">
+          <li>✔ Basic AI configuration</li>
+          <li>✔ Up to 2 tools enabled</li>
+          <li>✖ No multi-step reasoning or tool chaining</li>
+        </ul>
+        <p class="price">€0/month</p>
+      </div>
+
+      <div class="card">
+        <h3 class="text-xl font-bold mb-4">Intermediate</h3>
+        <p class="mb-2 text-sm opacity-80">Designed for developers with advanced needs. Unlock more tools and settings to build smarter AI agents.</p>
+        <ul class="mb-4 text-sm space-y-1">
+          <li>✔ Full AI configuration</li>
+          <li>✔ Up to 5 tools enabled</li>
+          <li>✔ Multi-step reasoning</li>
+          <li>✔ Limited tool chaining</li>
+        </ul>
+        <p class="price">€29/month</p>
+      </div>
+
+      <div class="card">
+        <h3 class="text-xl font-bold mb-4">Enterprise</h3>
+        <p class="mb-2 text-sm opacity-80">The ultimate package for large organizations and professionals. Maximum flexibility and unlimited possibilities.</p>
+        <ul class="mb-4 text-sm space-y-1">
+          <li>✔ Unlimited AI configurations</li>
+          <li>✔ All tools enabled</li>
+          <li>✔ Advanced multi-step reasoning</li>
+          <li>✔ Unlimited tool chaining</li>
+          <li>✔ Priority support</li>
+        </ul>
+        <p class="price">€99/month</p>
+      </div>
+    </div>
+  </section>
+</div>
+
+<script>
+    // --- Vanta.js Initialization ---
+  VANTA.NET({
+    el: "#vanta-bg",
+    mouseControls: true,
+    touchControls: true,
+    gyroControls: false,
+    minHeight: 200.00,
+    minWidth: 200.00,
+    scale: 1.00,
+    scaleMobile: 1.00,
+    color: 0xff4500, // OrangeRed accent
+    backgroundColor: 0x1a202c, // Dark background color from CSS
+    points: 12.0,
+    maxDistance: 20.00, // Adjusted for visibility
+    spacing: 15.00      // Adjusted for visibility
+  });
+
+  // --- TypeIt Initialization ---
+  new TypeIt("#heading", {
+    strings: "Forge Your AI Agent",
+    speed: 70,
+    waitUntilVisible: true,
+    // remove loop: false if you want it to repeat or add other strings
+  }).go();
+
+  // --- Navigation Logic ---
+  const mainLink = document.getElementById("main-link");
+  const packagesLink = document.getElementById("packages-link");
+  const mainSection = document.getElementById("main");
+  const packagesSection = document.getElementById("packages");
+
+  mainLink.addEventListener("click", (e) => {
+    e.preventDefault(); // Prevent default anchor behavior
+    mainSection.classList.remove("hidden");
+    packagesSection.classList.add("hidden");
+    // Optional: Add active state styling to buttons
+    mainLink.classList.add('btn-active');
+    packagesLink.classList.remove('btn-active');
+  });
+
+  packagesLink.addEventListener("click", (e) => {
+    e.preventDefault(); // Prevent default anchor behavior
+    packagesSection.classList.remove("hidden");
+    mainSection.classList.add("hidden");
+     // Optional: Add active state styling to buttons
+    packagesLink.classList.add('btn-active');
+    mainLink.classList.remove('btn-active');
+  });
+  // Set initial active button state
+   mainLink.classList.add('btn-active');
+
+
+  // --- Agent Configuration Logic ---
+  const generateBtn = document.getElementById('generate');
+  const copyBtn = document.getElementById('copy');
+  const previewArea = document.getElementById('preview');
+
+  const goalInput = document.getElementById('goal');
+  const toolsSelect = document.getElementById('tools');
+  const multiStepCheck = document.getElementById('adv-multi-step');
+  const toolChainingCheck = document.getElementById('adv-tool-chaining');
+  const personalityChecks = document.querySelectorAll('input[name="personality"]');
+  const creativitySlider = document.getElementById('creativity');
+  const creativityValueSpan = document.getElementById('creativity-value');
+
+  // Update creativity value display on slider change
+  creativitySlider.addEventListener('input', () => {
+      creativityValueSpan.textContent = creativitySlider.value;
+  });
+
+  generateBtn.addEventListener('click', () => {
+    // 1. Gather data
+    const goal = goalInput.value.trim() || 'Not specified'; // Trim whitespace
+    const selectedTool = toolsSelect.value; // Only single select possible with current HTML
+    const allowMultiStep = multiStepCheck.checked;
+    const allowToolChaining = toolChainingCheck.checked;
+    const creativity = creativitySlider.value;
+
+    const selectedPersonalities = [];
+    personalityChecks.forEach(checkbox => {
+      if (checkbox.checked) {
+        selectedPersonalities.push(checkbox.value);
+      }
+    });
+
+    // 2. Format configuration
+    const configLines = [
+      `// --- AgentForge Configuration ---`,
+      `Goal: ${goal}`,
+      `Tool: ${selectedTool}`,
+      `Creativity: ${creativity}`,
+      `---`,
+      `Advanced Settings:`,
+      `  Multi-Step Reasoning: ${allowMultiStep ? 'Enabled' : 'Disabled'}`,
+      `  Tool Chaining: ${allowToolChaining ? 'Enabled' : 'Disabled'}`,
+      `---`,
+      `Personality Traits: ${selectedPersonalities.length > 0 ? selectedPersonalities.join(', ') : 'Default'}`,
+       `// --- Generated: ${new Date().toLocaleString()} ---` // Use locale string for readability
+    ];
+
+    const configText = configLines.join('\n');
+
+    // 3. Display in preview
+    previewArea.textContent = configText;
+
+    // 4. Show copy button
+    copyBtn.classList.remove('hidden');
+  });
+
+  copyBtn.addEventListener('click', () => {
+    const textToCopy = previewArea.textContent;
+    navigator.clipboard.writeText(textToCopy).then(() => {
+      // Success feedback
+      copyBtn.textContent = 'Copied!';
+      setTimeout(() => {
+        copyBtn.textContent = 'Copy to Clipboard';
+      }, 2000); // Reset text after 2 seconds
+    }).catch(err => {
+      console.error('Failed to copy text: ', err);
+      copyBtn.textContent = 'Error Copying';
+       setTimeout(() => {
+        copyBtn.textContent = 'Copy to Clipboard';
+      }, 2000);
+    });
+  });
+
+</script>
+
+</body>
+</html>
